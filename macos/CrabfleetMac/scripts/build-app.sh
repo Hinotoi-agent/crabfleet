@@ -22,8 +22,18 @@ if [ -d "$resource_bundle" ]; then
     install -m 644 "$resource_bundle/PrivacyInfo.xcprivacy" "$resources_dir/PrivacyInfo.xcprivacy"
 fi
 
-codesign --force --sign - "$macos_dir/libRoyalVNCKit.dylib"
-codesign --force --sign - "$app_dir"
+codesign_identity=${CRABFLEET_CODESIGN_IDENTITY:-}
+if [ -z "$codesign_identity" ]; then
+    codesign_identity=$(security find-identity -v -p codesigning 2>/dev/null \
+        | sed -n 's/.*"\(.*\)"/\1/p' \
+        | head -n 1)
+fi
+if [ -z "$codesign_identity" ]; then
+    codesign_identity=-
+fi
+
+codesign --force --sign "$codesign_identity" "$macos_dir/libRoyalVNCKit.dylib"
+codesign --force --sign "$codesign_identity" "$app_dir"
 codesign --verify --deep --strict "$app_dir"
 
 echo "$app_dir"
